@@ -11,6 +11,8 @@ Persian (RTL) Game Explorer built with Next.js 16 (App Router) and strict TypeSc
 
 Use `npm.cmd` / `npx.cmd` in PowerShell, where `npm.ps1` is blocked by the execution policy.
 
+Do not use the `Read` and `Bash` tools. Read files and run every command through the PowerShell tool (for example `Get-Content -Raw -Encoding UTF8 <path>`).
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know
@@ -50,7 +52,7 @@ Violating any of these gets the submission rejected:
 ## Next.js Notes
 
 - `next.config.ts` enables `cacheComponents: true` and `partialPrefetching: true`. Check `node_modules/next/dist/docs/` before writing server fetching, caching, or `revalidate` code.
-- Tailwind 4 is wired through the `@tailwindcss/turbopack` loader in `next.config.ts`; `app/globals.css` starts with `@import "tailwindcss"`.
+- Tailwind 4 is wired through the PostCSS plugin `@tailwindcss/postcss` in `postcss.config.mjs` (the setup from the Next.js CSS docs); `app/globals.css` starts with `@import "tailwindcss"`.
 - The root layout uses the generated `LayoutProps<"/">` type. `next-env.d.ts` is git-ignored.
 - RTL is set manually once in `app/layout.tsx` (`<html lang="fa" dir="rtl">`). Vazirmatn is loaded with `next/font/google` and exposed as `--font-vazirmatn`, mapped to `--font-sans`.
 - Use logical properties only (`ps-*`, `pe-*`, `ms-*`, `me-*`, `border-s-*`, `text-start`); never `left`/`right`.
