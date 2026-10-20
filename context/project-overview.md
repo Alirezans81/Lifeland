@@ -14,7 +14,7 @@ A single-section frontend deliverable ("Game Explorer") for Lifelands, an Irania
 ## Core User Flow
 
 1. User opens the page; the first 12 games are already rendered by the server (skeleton shown while streaming).
-2. User types in search (500ms debounce) over `title` and `companyName`; Persian text is normalized before matching.
+2. User types in search (350ms debounce) over `title` and `companyName`; Persian text is normalized before matching.
 3. User narrows by vendor (multi-select), category, and optionally favorites-only; picks a sort.
 4. State is written to the URL; sharing the link or using back/forward restores the exact view.
 5. User toggles favorites (persisted in `localStorage`) and loads more games.
@@ -24,7 +24,7 @@ A single-section frontend deliverable ("Game Explorer") for Lifelands, an Irania
 
 ### Discovery
 
-- Search across `title` and `companyName` with 500ms debounce.
+- Search across `title` and `companyName` with 350ms debounce.
 - Persian normalization: ی/ي and ک/ك unification, Persian/Arabic digits to Latin, ZWNJ removal, whitespace collapse.
 - Config-driven filters: `vitrinThirdPartyVendors` (multi-select), `category.title`, score range, plus one extra filter not in the brief (documented in README).
 - Sort by `score`, `runCount`, `seenCount`, `like`, and a blended "quality" heuristic.

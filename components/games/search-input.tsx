@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 
-const SEARCH_DEBOUNCE_MS = 500;
+const SEARCH_DEBOUNCE_MS = 350;
 
 type SearchInputProps = {
   initialQuery: string;

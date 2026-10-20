@@ -1,8 +1,12 @@
 import { getGamesPage } from "@/app/_data/get-games-page";
 import { GameExplorer } from "@/components/games/game-explorer";
 
-export async function GamesSection() {
-  const result = await getGamesPage(1);
+type GamesSectionProps = {
+  pageId: number;
+};
+
+export async function GamesSection({ pageId }: GamesSectionProps) {
+  const result = await getGamesPage(pageId);
 
   if (!result.ok) {
     return (
@@ -12,15 +16,22 @@ export async function GamesSection() {
     );
   }
 
-  const { games } = result.page;
+  const { games, total, eachPerPage } = result.page;
 
   if (games.length === 0) {
     return (
       <p className="rounded-md bg-surface p-6 text-center text-muted">
-        هنوز بازی‌ای برای نمایش وجود ندارد.
+        بازی‌ای در این صفحه پیدا نشد.
       </p>
     );
   }
 
-  return <GameExplorer games={games} />;
+  return (
+    <GameExplorer
+      games={games}
+      pageId={result.page.pageId}
+      total={total}
+      eachPerPage={eachPerPage}
+    />
+  );
 }
