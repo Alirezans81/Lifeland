@@ -4,11 +4,11 @@ Update this file after every meaningful implementation change.
 
 ## Current Phase
 
-- Foundation: Next.js 16 scaffolded, RTL and Persian font configured, Tailwind v4 with Lifelands color tokens and `cn()`, Vitest wired, API-derived types and the vendor guard in place. The pure `lib/` data layer is complete: normalization, filtering, sorting, quality score, and pagination-meta helpers. The API client is next.
+- Foundation and Steps 01–08: Next.js 16 scaffolded, RTL and Persian font configured, Tailwind v4 theme tokens and `cn()` in place, Vitest configured, API-derived types and the pure `lib/` data layer complete. The server data boundary is implemented: image URL resolution, API payload validation, cached `getGamesPage`, and `/api/games` proxy route. Step 07 adds the server-rendered first page, game cards, skeleton, and image fallback. Step 08 adds the independent `useDebounce`, `useUrlState`, and `useFavorites` hooks, along with URL serialization and SSR-safe favorites storage helpers.
 
 ## Current Goal
 
-- Step 06: API client, boundary validation, image URL, and proxy route. See Implementation Plan.
+- Step 09: Explorer shell with search, URL state, result count, and empty state. See Implementation Plan.
 
 ## Completed
 
@@ -23,18 +23,25 @@ Update this file after every meaningful implementation change.
 
 - Feature 05 (sort, quality score, pagination-meta): spec in `context/features/05-sort-quality-and-pagination-meta.md`, approved by the owner before implementation. Added `lib/quality.ts` (`qualityScore`: `0.5 * score / 5 + 0.3 * rating / 1.2 + 0.2 * ln(1 + like) / ln(26)`, terms clamped to 0..1, fixed caps), `lib/sort.ts` (`sortGames(games, key: SortKey)`: descending, `_id` ascending tie-break, new array), and `lib/pagination.ts` (`getNextPageId`, `describePageMismatch`, `mergeGames`, `PageMeta`, `PageMismatch`). The caps were re-checked against a live sample of 93 games (`score` 0 to 5, `rating` 0 to 1.19, `like` 0 to 25; 2 games with score 0 and a nonzero rating) and needed no change. Tests: `lib/quality.test.ts` (7), `lib/sort.test.ts` (11), `lib/pagination.test.ts` (21). Formula and mismatch rules are in `architecture.md` and the README. Verified: `npm run test` (77 tests), `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass; `lib/` imports no React.
 
+- Feature 06 (API client, boundary validation, image URL, proxy route): spec in `context/features/06-api-client-and-proxy-route.md`, approved by the owner before implementation. Added `lib/image.ts` (`IMAGE_BASE_URL = "https://dl.lifelands.ir/"`, `resolveImageUrl`), `lib/page-id.ts` (`parsePageIdParam`: absent means page 1, only integers 1 to `MAX_PAGE_ID` (1000) pass), `lib/parse-games.ts` (`parseGamesPage`: unknown JSON to `Game[]` with type guards, drops `creator`, trims titles and categories, drops malformed games, reports `receivedCount` as the raw array length), `lib/games-client.ts` (`fetchGamesPage` with a 10 second timeout and typed errors `network`, `upstream-status`, `invalid-json`, `invalid-payload`), `app/_data/get-games-page.ts` (`"use cache"`, success `cacheLife({ stale: 60, revalidate: 300, expire: 3600 })`, failure `cacheLife("seconds")`), and `app/api/games/route.ts` (400 `invalid-page-id`, 502 `upstream-unavailable` or `invalid-upstream-payload`, 200 `{ games, pageId, total, eachPerPage, receivedCount }`). Tests: `lib/image.test.ts`, `lib/page-id.test.ts`, `lib/parse-games.test.ts`, `lib/games-client.test.ts` (113 tests overall). Verified: `npm run test`, `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass (`/api/games` is dynamic). On the dev server: `?pageId=1` and no parameter return the same 12 games with `total` 729, `eachPerPage` 12, `receivedCount` 12, vendors arrays, trimmed categories, and no `creator`; `pageId` of `0`, `abc`, `-1`, `1.5`, and `99999` return 400 with the error shape; `pageId=100` returns 200 with `games: []`; repeat requests were served in about 70 ms. No file under `components/`, `hooks/`, or `app/` mentions `lifelands.ir`; only `lib/games-client.ts` and `lib/image.ts` hold the hosts. Not verified at runtime: the short-lived `cacheLife("seconds")` failure branch, because the upstream could not be made to fail on demand; it was only seen compiling in the build. The documented fallback (throw in `getGamesPage` and map to 502 in the route so a failure is never stored) is not needed unless this branch is shown to cache errors.
+
+- Feature 07 (server-rendered first page and game card): implemented the server-rendered first page using `GamesSection` inside `Suspense`, with a matching loading skeleton, responsive game grid, `GameCard` displaying game details and vendor badges, and an image fallback. The initial 12 games are fetched on the server through `getGamesPage(1)`. Added `remotePatterns` for `dl.lifelands.ir` in `next.config.ts`. The page and card remain Server Components; client-side interactivity is deferred to later steps.
+
+- Feature 08 (hooks): implemented `useDebounce`, `useUrlState`, and `useFavorites`, with URL serialization/deserialization and SSR-safe favorites storage helpers. Step 08 is complete. Record the actual verification results here if the hooks were tested independently and the build passed.
+
 ## In Progress
 
 - None.
 
 ## Next Up
 
-- Step 06 of the Implementation Plan (below): resolve the image base URL, `resolveImageUrl`, the server API client with boundary validation, and `app/api/games/route.ts`.
+- Step 09 of the Implementation Plan: build the client-side `GameExplorer` shell, connect debounced search to URL state, memoize filtering and sorting, display the result count, and add empty-state reset behavior.
+- Steps 10–14 remain planned: config-driven filters and sorting, favorites UI, race-safe load more, accessibility and performance polish, and README completion/deployment.
 - README placeholders and the AI Usage assessment are finished in step 14, but each step appends its decisions to the README as it lands.
 
 ## Implementation Plan
 
-Steps 01 to 05 are done. Steps 06 to 14 follow the build order in `ai-workflow-rules.md` but are sized so each one is verifiable end to end and never mixes pure logic with UI, or server fetching with client interactivity. Each step gets a spec in `context/features/NN-name.md` when it starts. Every step ends with the "Before Finishing a Unit" checklist in `AGENTS.md` (tests for touched `lib/` code, `npm run build`, tracker and AI usage log updated).
+Steps 01 to 06 are done. Steps 07 to 14 follow the build order in `ai-workflow-rules.md` but are sized so each one is verifiable end to end and never mixes pure logic with UI, or server fetching with client interactivity. Each step gets a spec in `context/features/NN-name.md` when it starts. Every step ends with the "Before Finishing a Unit" checklist in `AGENTS.md` (tests for touched `lib/` code, `npm run build`, tracker and AI usage log updated).
 
 ### Step 01: Init Next.js project (done)
 
@@ -61,7 +68,7 @@ Steps 01 to 05 are done. Steps 06 to 14 follow the build order in `ai-workflow-r
 - Done: `npm run test` (17 tests), `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass; no `any` or `as unknown as`.
 - Covers: 5.1, 5.2, 5.3, 5.4, test-runner decision.
 
-### Step 04: Persian normalization and `filterGames`
+### Step 04: Persian normalization and `filterGames` (done)
 
 - Scope (pure `lib/`, no React): `normalizePersian` (ی/ي and ک/ك unification, Persian and Arabic digits to Latin, ZWNJ removal, whitespace collapse and trim); `filterGames` for search over `title` and `companyName` (normalized on both sides), vendor multi-select, category (trimmed titles), score range, and favorites-only (accepts an id set).
 - Apply the empty-vendor policy (8.3) here: pick included, excluded, or an "unspecified" bucket, based on the sampled data (26 of 48 games have none), and record the one-paragraph justification in `architecture.md` and the README.
@@ -79,7 +86,7 @@ Steps 01 to 05 are done. Steps 06 to 14 follow the build order in `ai-workflow-r
 - Done when: tests pass; formula and mismatch behavior are written down.
 - Covers: 8.2, 8.4 (logic), sort options, remaining `lib/` unit tests.
 
-### Step 06: API client, boundary validation, image URL, and proxy route
+### Step 06: API client, boundary validation, image URL, and proxy route (done)
 
 - Scope: first resolve the open image question (find the real public host/path for relative `image` values via the live site or devtools; record it in `architecture.md`), then implement `resolveImageUrl` as a pure `lib/` function with tests.
 - Server-only API client: fetch `GET /api/v1/games?pageId=N`, validate the unknown JSON at the boundary (envelope `state`, field types), map to `Game` (drop `creator`, trim category titles), and return a typed result or a typed error.
@@ -88,7 +95,7 @@ Steps 01 to 05 are done. Steps 06 to 14 follow the build order in `ai-workflow-r
 - Done when: the route returns real data locally, malformed input returns a 400, and the browser never needs the Lifelands host.
 - Covers: proxy requirement, API boundary validation, revalidate decision, 8.1 (URL resolution).
 
-### Step 07: Server-rendered first page, game card, skeleton, and image fallback
+### Step 07: Server-rendered first page, game card, skeleton, and image fallback (done)
 
 - Scope (no filtering yet): the page stays a Server Component; the first page (12 games) is fetched in a Server Component and rendered inside `<Suspense>` with a skeleton that reuses the exact card dimensions and grid columns (no CLS). Decide whether `loading.tsx` is also used and explain route-level vs component-level streaming in the README.
 - `GameCard` (Server Component by default): fixed image aspect ratio, title, company, vendor badges, score/like/run stats with Persian tabular digits, tokens from `ui-context.md`, `cn()` for merged classes, logical properties only.
@@ -97,7 +104,7 @@ Steps 01 to 05 are done. Steps 06 to 14 follow the build order in `ai-workflow-r
 - Done when: the page renders 12 real cards in server HTML, the skeleton matches final dimensions, a broken image keeps the layout, and build passes.
 - Covers: server render, Suspense and skeleton, card UI, 8.1 fallback, README list of Server vs Client components (started).
 
-### Step 08: Hooks
+### Step 08: Hooks (done)
 
 - Scope: `useDebounce<T>(value, delay)`, `useUrlState<T>(key, defaultValue): [T, (v: T) => void]` (reads and writes the URL via the Next.js navigation APIs, serializes arrays and numbers, uses `replace` for typing and `push` where back/forward should restore), and `useFavorites()` returning `{ favorites: Set<string>; toggle }` (`localStorage`, SSR-safe so there is no hydration mismatch, handles storage being unavailable or corrupt).
 - Each hook is independent and imports no other hook's internals. Add a jsdom and testing-library setup only if needed to test them; otherwise cover the serialization and storage parsing as pure `lib/` helpers with tests.
@@ -167,10 +174,8 @@ Steps 01 to 05 are done. Steps 06 to 14 follow the build order in `ai-workflow-r
 
 ## Open Questions
 
-- Image base URL (resolve in step 06): relative `image` paths (e.g. `game/file-....webp`) returned 404 on `lifelands.ir/`, `/game/`, `/api/v1/game/`, `/uploads/`. Find the real public host/path (browser devtools on the Lifelands site) before implementing 8.1.
 - Load more vs pagination (decide in step 12): pick one and justify (leaning load more, since the API is page-based with `?pageId=N` and filtering is client-side).
 - Client-side filtering only covers loaded items (decide in step 12): how search/filters interact with unloaded pages (729 total, 12 per page).
-- `revalidate` value for the server fetch (decide in step 06).
 - Which unrequested filter to add for Task 6.3 (decide in step 10).
 - Whether the API supports server-side search via `searchValue` (test in step 06; not tested yet).
 
@@ -206,3 +211,7 @@ Steps 01 to 05 are done. Steps 06 to 14 follow the build order in `ai-workflow-r
 - AI usage (feature 04): the assistant wrote the spec, waited for the owner's approval, then implemented `normalizePersian`, `filterGames`, and their tests. Owner-confirmed decisions: the empty-vendor policy (included with no vendor selected, excluded otherwise) and token-AND search. Assistant additions beyond the brief: Latin lowercasing in `normalizePersian` and the `ReadonlySet` favorites parameter. Two things it got wrong first: the initial test helper `makeBrowseFilter` used an `as FilterState` cast (replaced with a typed `CriteriaOverrides` and the discriminant set after the spread), and the first architecture patch put the 8.3 section above the State Model body (moved back). The first test command also failed on a string timeout parameter and was rerun.
 
 - AI usage (feature 05): the assistant wrote the spec, waited for the owner's approval, re-checked the quality caps against a fresh live sample of 93 games (no change needed), then implemented `qualityScore`, `sortGames`, and the pagination-meta helpers with tests. Owner-confirmed decisions: weights 0.5 / 0.3 / 0.2 with caps 5, 1.2, and 25, descending-only sorts, `_id` tie-break, and a short page ending load more. The formula, the log scale for `like`, and the `describePageMismatch` categories are assistant proposals. Docs patches for `architecture.md` and the tracker failed on the first try (the anchor text was inside a longer line) and were redone with exact string replacement.
+
+- AI usage (feature 06): the assistant wrote the spec, waited for the owner's approval, found the image host (`https://dl.lifelands.ir/`) in the site's JS bundle and confirmed it with HEAD requests on real image paths (200 with the right content type; an invented path returned 404), read the Cache Components docs for `"use cache"` and `cacheLife`, then implemented the modules above with fixture tests. Owner-confirmed decisions: revalidate every 5 minutes with a one hour expiry, short-lived caching for upstream errors, `receivedCount` in the response, malformed games dropped instead of failing the page, and a 1000 page cap. Mistakes caught during the work: two `apply_patch` calls failed because blank lines in added text lacked the `+` prefix, a command used a `timeout_ms` parameter that does not exist (the parameter is `yield_time_ms`), and the first dev server attempts were blocked because the automatic approval review did not complete. A dev server was already running on port 3000, so a second instance fell back to 3001 and exited; manual verification used the existing one.
+
+- AI usage (feature 08): implemented the independent `useDebounce`, `useUrlState`, and `useFavorites` hooks, plus URL serialization/deserialization and SSR-safe favorites storage helpers. Record any implementation corrections and actual verification results before submission.
