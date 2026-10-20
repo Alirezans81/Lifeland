@@ -1,27 +1,7 @@
 import { Suspense } from "react";
 
+import { GamesSkeleton } from "@/components/games/games-skeleton";
 import { GamesSection } from "@/components/games/games-section";
-
-function GamesSkeleton() {
-  return (
-    <div
-      aria-hidden="true"
-      className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-    >
-      {Array.from({ length: 12 }, (_, index) => (
-        <div key={index} className="overflow-hidden rounded-md bg-surface">
-          <div className="aspect-[4/3] animate-pulse bg-border" />
-
-          <div className="space-y-3 p-4">
-            <div className="h-5 w-3/4 animate-pulse rounded-sm bg-border" />
-            <div className="h-4 w-1/2 animate-pulse rounded-sm bg-border" />
-            <div className="h-4 w-full animate-pulse rounded-sm bg-border" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export default function Home() {
   return (

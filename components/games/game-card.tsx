@@ -1,6 +1,6 @@
-import Image from "next/image";
+import { memo } from "react";
 import { cn } from "@/lib/cn";
-import { resolveImageUrl } from "@/lib/image";
+import { GameImage } from "@/components/games/game-image";
 import type { Game } from "@/types/game";
 
 type GameCardProps = {
@@ -14,9 +14,7 @@ const vendorLabels = {
   soroush: "سروش",
 } as const;
 
-export function GameCard({ game }: GameCardProps) {
-  const imageUrl = resolveImageUrl(game.image);
-
+export const GameCard = memo(function GameCard({ game }: GameCardProps) {
   return (
     <article
       className={cn(
@@ -24,21 +22,7 @@ export function GameCard({ game }: GameCardProps) {
         "bg-surface transition-shadow hover:shadow-md",
       )}
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-border">
-        {imageUrl ? (
-          <Image
-            src={imageUrl}
-            alt={game.title}
-            fill
-            sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw"
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-sm text-muted">
-            تصویری موجود نیست
-          </div>
-        )}
-      </div>
+      <GameImage path={game.image} title={game.title} />
 
       <div className="space-y-4 p-4">
         <div className="space-y-1">
@@ -47,11 +31,17 @@ export function GameCard({ game }: GameCardProps) {
           </h2>
 
           <p className="line-clamp-1 text-sm text-muted">
-            {game.categoryTitle || "بدون دسته‌بندی"}
+            {game.companyName || "سازنده نامشخص"}
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex min-h-7 flex-wrap gap-2">
+          {game.categoryTitle ? (
+            <span className="rounded-full border border-border px-2.5 py-1 text-xs text-muted">
+              {game.categoryTitle}
+            </span>
+          ) : null}
+
           {game.vendors.map((vendor) => (
             <span
               key={vendor}
@@ -87,4 +77,4 @@ export function GameCard({ game }: GameCardProps) {
       </div>
     </article>
   );
-}
+});

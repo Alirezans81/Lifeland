@@ -12,7 +12,7 @@ export async function GamesSection() {
     );
   }
 
-  const games = result.page.games.slice(0, 12);
+  const { games } = result.page;
 
   if (games.length === 0) {
     return (

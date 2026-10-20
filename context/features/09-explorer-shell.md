@@ -139,7 +139,9 @@ Do not modify `GameCard`, the API client, parser, proxy route, or data types unl
 - `"score"` is the default browse sort unless an existing project decision overrides it
 - search-mode `"relevance"` preserves filtered order because `sortGames` accepts only `SortKey`
 - favorites are not active in this step; pass an empty set until step 11
-- keep `GameCard` as a Server Component rather than converting it just to use `React.memo`
+- wrap `GameCard` in `React.memo`; this makes `GameCard` and `GameImage` client components, an accepted deviation from the earlier Server Component decision because the card list is already client-rendered
+- filter and sort selection lives in `lib/explore.ts` (`createExplorerFilter`, `exploreGames`) so the sort key is defined once
+- `SearchInput` and `EmptyResults` live in their own files under `components/games/`
 
 ## when to be done
 

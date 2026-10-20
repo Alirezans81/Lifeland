@@ -32,12 +32,12 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-| Command         | Purpose                         |
-| --------------- | ------------------------------- |
-| `npm run dev`   | Start the dev server            |
-| `npm run build` | Production build and type check |
-| `npm run start` | Serve the production build      |
-| `npm run lint`  | Run ESLint                      |
+| Command         | Purpose                          |
+| --------------- | -------------------------------- |
+| `npm run dev`   | Start the dev server             |
+| `npm run build` | Production build and type check  |
+| `npm run start` | Serve the production build       |
+| `npm run lint`  | Run ESLint                       |
 | `npm run test`  | Run unit and type tests (Vitest) |
 
 No environment variables or API keys are required. `.env*` files are git-ignored and must never be committed.
@@ -68,7 +68,7 @@ Violating any of these gets the submission rejected:
 ## Planned Features
 
 - First 12 games server-rendered, wrapped in `<Suspense>` with a skeleton that matches the final card dimensions.
-- Search over `title` and `companyName` with a 300ms debounce and Persian normalization (ی/ي, ک/ك, Persian/Arabic digits to Latin, ZWNJ removal, whitespace collapse).
+- Search over `title` and `companyName` with a 500ms debounce and Persian normalization (ی/ي, ک/ك, Persian/Arabic digits to Latin, ZWNJ removal, whitespace collapse).
 - Config-driven filters: vendor (multi-select), category, score range, plus one extra filter documented here.
 - Sort by `score`, `runCount`, `seenCount`, `like`, and a blended quality score.
 - Favorites persisted in `localStorage`, with a favorites-only filter.
@@ -95,7 +95,7 @@ Verified against the live endpoint on 2026-10-19:
 - Envelope is `{ state, data }`. `data` includes `pageId`, `eachPerPage` (12), `total` (729), and `games[]`.
 - Pagination uses `?pageId=N`. `?page=N` is ignored and returns page 1. A page past the end returns an empty `games` array.
 - Category titles have trailing spaces and must be trimmed. `companyName` can be empty or inconsistent. Empty `vitrinThirdPartyVendors` arrays are common.
-- `image` is a relative path; the public base URL is not confirmed yet.
+- `image` is a relative path resolved against `https://dl.lifelands.ir/` (confirmed with HEAD requests on real image paths).
 - The `creator` object contains personal data and is never forwarded to the client.
 
 ## Design Decisions and Trade-offs
@@ -110,7 +110,7 @@ Decided so far:
 - Quality score: `0.5 * score / 5 + 0.3 * rating / 1.2 + 0.2 * ln(1 + like) / ln(26)`, each term clamped to 0..1, so the result is 0 to 1. The scales are fixed caps taken from a live sample (`score` up to 5, `rating` up to 1.19, `like` up to 25), so a game's quality never changes when more pages load. `like` is log-scaled so a few popular games do not dominate. A game with `score` 0 and a nonzero `rating` still gets credit for `rating` and `like`. `level`, `runCount`, and `seenCount` are not part of it (the last two have their own sort options). All sorts are descending with `_id` as the tie-break.
 - `total` mismatch: load more stops on an empty page, on a page shorter than `eachPerPage`, or once the unique loaded count reaches `total`. A missing or invalid `total` falls back to the empty and short-page rules, so it can never loop forever. Games are deduplicated by `_id` when pages are merged.
 
-To be decided and documented here as they are implemented: load more vs pagination, `revalidate` value and why, extra filter, TypeScript decisions (vendor union and guard, filter-state union, `SortKey`), and which components are Server Components and why.
+- Streaming: the page uses component-level streaming only. `GamesSection` suspends inside `<Suspense>` with `GamesSkeleton`, which mirrors the explorer layout (label, input, counter, and cards with the same borders, stats, and badge row) so the grid does not shift. There is no `loading.tsx`: the header renders immediately and a route-level fallback would replace the whole page, including the header, with a second skeleton.`n- Images: `GameImage` swaps to a same-size placeholder when the image fails to load, not only when the URL is missing.`n- Search history: committing a search uses `history: "replace"`, so typing does not add one history entry per commit.`n- Server vs client: `GamesSection`, the page, and the layout are Server Components. `GameExplorer`, `SearchInput`, `GameImage`, and `GameCard` run on the client because they depend on URL state, input state, and image load errors; `GameCard` is memoized with `React.memo`. `EmptyResults` has no client-only code and renders wherever it is imported.`n`nTo be decided and documented here as they are implemented: load more vs pagination, `revalidate` value and why, extra filter, and TypeScript decisions (vendor union and guard, filter-state union, `SortKey`).
 
 ## Documentation
 

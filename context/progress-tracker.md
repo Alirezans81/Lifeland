@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- Step 09: Explorer shell with search, URL state, result count, and empty state. See Implementation Plan.
+- None
 
 ## Completed
 
@@ -99,7 +99,7 @@ Steps 01 to 06 are done. Steps 07 to 14 follow the build order in `ai-workflow-r
 ### Step 07: Server-rendered first page, game card, skeleton, and image fallback (done)
 
 - Scope (no filtering yet): the page stays a Server Component; the first page (12 games) is fetched in a Server Component and rendered inside `<Suspense>` with a skeleton that reuses the exact card dimensions and grid columns (no CLS). Decide whether `loading.tsx` is also used and explain route-level vs component-level streaming in the README.
-- `GameCard` (Server Component by default): fixed image aspect ratio, title, company, vendor badges, score/like/run stats with Persian tabular digits, tokens from `ui-context.md`, `cn()` for merged classes, logical properties only.
+- `GameCard` (client component since step 09, memoized with `React.memo`): fixed image aspect ratio, title, company, vendor badges, score/like/run stats with Persian tabular digits, tokens from `ui-context.md`, `cn()` for merged classes, logical properties only.
 - Image: `next/image` with explicit dimensions and lazy loading below the fold; a small client leaf that swaps to a placeholder rendered inside the same card box on error (8.1), not just hiding the image.
 - Persian section header and storytelling line; responsive grid.
 - Done when: the page renders 12 real cards in server HTML, the skeleton matches final dimensions, a broken image keeps the layout, and build passes.
@@ -114,7 +114,7 @@ Steps 01 to 06 are done. Steps 07 to 14 follow the build order in `ai-workflow-r
 
 ### Step 09: Explorer shell with search, URL state, and empty state
 
-- Scope: a client `GameExplorer` leaf that receives the server-fetched first page, owns interactivity, and renders the toolbar slot, grid, and result count. Search box (accessible label, 300ms debounce via `useDebounce`, input draft kept in local state, committed value in the URL via `useUrlState`). Filtering and sorting memoized with `useMemo` on `filterGames`/`sortGames`; memoized card component; `aria-live="polite"` result count.
+- Scope: a client `GameExplorer` leaf that receives the server-fetched first page, owns interactivity, and renders the toolbar slot, grid, and result count. Search box (accessible label, 500ms debounce via `useDebounce`, input draft kept in local state, committed value in the URL via `useUrlState`). Filtering and sorting memoized with `useMemo` on `filterGames`/`sortGames`; memoized card component; `aria-live="polite"` result count.
 - Empty state with a "reset filters" action that clears the URL state; also the error state with retry hook-up point.
 - Done when: typing filters Persian text correctly (ی/ي, digits), the URL updates, reloading or sharing the link restores the same view, and typing stays responsive.
 - Covers: search UX, URL as source of truth (search part), empty state, memoization.
@@ -216,5 +216,7 @@ Steps 01 to 06 are done. Steps 07 to 14 follow the build order in `ai-workflow-r
 - AI usage (feature 06): the assistant wrote the spec, waited for the owner's approval, found the image host (`https://dl.lifelands.ir/`) in the site's JS bundle and confirmed it with HEAD requests on real image paths (200 with the right content type; an invented path returned 404), read the Cache Components docs for `"use cache"` and `cacheLife`, then implemented the modules above with fixture tests. Owner-confirmed decisions: revalidate every 5 minutes with a one hour expiry, short-lived caching for upstream errors, `receivedCount` in the response, malformed games dropped instead of failing the page, and a 1000 page cap. Mistakes caught during the work: two `apply_patch` calls failed because blank lines in added text lacked the `+` prefix, a command used a `timeout_ms` parameter that does not exist (the parameter is `yield_time_ms`), and the first dev server attempts were blocked because the automatic approval review did not complete. A dev server was already running on port 3000, so a second instance fell back to 3001 and exited; manual verification used the existing one.
 
 - AI usage (feature 08): implemented the independent `useDebounce`, `useUrlState`, and `useFavorites` hooks, plus URL serialization/deserialization and SSR-safe favorites storage helpers. Record any implementation corrections and actual verification results before submission.
+
+- Step 09 gaps left open: the error state keeps its static message (`GamesSection`) with no retry hook-up point yet, which the plan listed for this step. It moves to the load-more step, which already owns the client fetch through the route handler.`n- AI usage (feature 07): the assistant implemented `GamesSection`, `GameCard`, the page skeleton, and `remotePatterns`. Review later found gaps that were fixed in the second review pass: no per-image 404 fallback, `companyName` not shown, a hardcoded `.slice(0, 12)`, and a skeleton that did not match the card or explorer layout. The image-host and README notes were stale until then.`n- AI usage (feature 09 second review fixes): `useUrlState` for `q` now uses `history: "replace"`. Added `formatResultCount` (zero, one, many) with tests. Added `GameImage` (client, same-size fallback on load error) and `GamesSkeleton` (own file, mirrors the explorer layout). `GameCard` shows `companyName` with the category as a badge. Removed `.slice(0, 12)`. README streaming, image, history, and Server/Client notes were updated. `GameCard` is memoized and therefore runs on the client; this is documented instead of hidden.`n- AI usage (feature 09 review fixes): addressed a code-standards review. `SearchInput` now commits only when `debouncedQuery === draftQuery`, so a stale debounced value cannot be re-committed after Back/Forward (the root cause, not a reliance on `lastValueRef` or effect order). Split `SearchInput` and `EmptyResults` out of `game-explorer.tsx`. Wrapped `GameCard` in `React.memo`. Moved filter construction and the browse sort into `lib/explore.ts` with tests, removing the duplicated `"score"` key. Verified with `tsc --noEmit`, lint, tests, and build; browser Back/Forward was not re-tested manually.
 
 - AI usage (feature 09): implemented `GameExplorer`, debounced Persian-aware search, URL query synchronization, memoized filtering/sorting, result count, and empty state. Fixed input focus loss by removing key-based remounting and synchronizing the search input with URL state. Fixed Back/Forward history being overwritten by stale debounced values by tracking the last committed value in `useUrlState` and clearing pending navigation state on `popstate`. Manual interaction tests passed for continuous typing, focus preservation, and browser history navigation. Final automated verification is still to be recorded.
