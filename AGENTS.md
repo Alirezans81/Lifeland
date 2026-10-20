@@ -1,13 +1,13 @@
 # Lifelands Game Explorer: Agent Guide
 
-Persian (RTL) Game Explorer built with Next.js 16 (App Router) and strict TypeScript. It renders games from `GET https://lifelands.ir/api/v1/games` as a searchable, filterable, sortable grid. Human-facing overview, stack, and run steps are in `README.md`; the full brief is `lifelands-technical-assignment.md` (never modify it).
+Persian (RTL) Game Explorer built with Next.js 16 (App Router) and strict TypeScript. It renders games from `GET https://lifelands.ir/api/v1/games` as a searchable, filterable, sortable grid. Human-facing overview, stack, and run steps are in `README.md`; the requirements are extracted into `context/`.
 
 ## Commands
 
 - `npm run dev`: dev server on `http://localhost:3000`
 - `npm run build`: production build and type check (must pass before a unit is done)
 - `npm run lint`: ESLint
-- No test runner is installed yet (Vitest is the candidate).
+- `npm run test`: Vitest (`vitest run`, node environment); covers `lib/**/*.test.ts` and `types/**/*.test.ts`
 
 Use `npm.cmd` / `npx.cmd` in PowerShell, where `npm.ps1` is blocked by the execution policy.
 
@@ -67,7 +67,7 @@ Violating any of these gets the submission rejected:
 - `lib/`: pure data layer (normalization, filter, sort, quality score, vendor guard, API client) with colocated tests
 - `types/`: types derived from the real API response
 
-Only `app/`, `public/`, and `context/` exist so far; the rest are created as features land.
+`app/`, `lib/`, `types/`, `public/`, and `context/` exist so far; `components/` and `hooks/` are created as features land.
 
 ## API Facts
 

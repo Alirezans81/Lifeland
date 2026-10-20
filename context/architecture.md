@@ -8,7 +8,7 @@
 | Styling   | Tailwind or CSS Modules (own choice)        | No prebuilt component kits                 |
 | Data      | Lifelands REST API (`/api/v1/games`)        | Read-only game catalog                     |
 | Storage   | Browser `localStorage`                      | Favorites only                             |
-| Testing   | Unit test runner of choice (e.g. Vitest)    | Pure `lib/` functions                      |
+| Testing   | Vitest (node environment)                   | Pure `lib/` functions and type tests       |
 | Hosting   | Vercel or Netlify                           | Public deployed link                       |
 
 ## System Boundaries
@@ -29,7 +29,7 @@
 - CORS is `*` and no `Cache-Control` header is sent, but the brief still forbids browser-direct calls: use a proxy.
 - `/api/v1/` root returns 401; only the games endpoint is known to be public.
 - Fields to consume and type: `_id`, `title`, `companyName`, `category.title`, `vitrinThirdPartyVendors`, `score`, `rating`, `like`, `level`, `runCount`, `seenCount`, `image`, `createdAtIso`. Other fields (`creator`, `reviewHistory`, ...) are not needed; the creator object contains personal data, so do not pass it to the client.
-- Observed vendors: `rubika`, `soroush`. Empty vendor arrays are common (26 of 48 sampled; none on page 1).
+- Observed vendors: `rubika`, `soroush`. Empty vendor arrays are common (26 of 48 sampled; none on page 1). The field is also missing entirely on some games (27 of 117 in a later sample), so type it as optional.
 - Data quirks:
   - Category titles have trailing spaces (`"امتیازی "`, `"رانندگی "`); trim/normalize before use as filter values.
   - `rating` is a mix of ints and decimals (0 to ~1.13); `score` is 0 to 4.9; `like` up to 25; `runCount` up to ~17k; `seenCount` up to ~27k.
