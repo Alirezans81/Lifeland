@@ -4,11 +4,11 @@ Update this file after every meaningful implementation change.
 
 ## Current Phase
 
-- Foundation: Next.js 16 scaffolded, RTL and Persian font configured, Tailwind v4 with Lifelands color tokens and `cn()`, Vitest wired, API-derived types and the vendor guard in place. The pure `lib/` data layer (normalization, filter, sort, quality score) is not started.
+- Foundation: Next.js 16 scaffolded, RTL and Persian font configured, Tailwind v4 with Lifelands color tokens and `cn()`, Vitest wired, API-derived types and the vendor guard in place. The pure `lib/` data layer has normalization and filtering; sort and quality score are not started.
 
 ## Current Goal
 
-- Step 04: Persian normalization and `filterGames` (pure `lib/`, with tests). See Implementation Plan.
+- Step 05: sorting, quality score, and pagination-meta helpers (pure `lib/`, with tests). See Implementation Plan.
 
 ## Completed
 
@@ -19,14 +19,15 @@ Update this file after every meaningful implementation change.
 - Feature 02 (init UI themes): colors extracted from lifelands.ir and documented in `context/ui-context.md` (source table, light/dark tokens, measured WCAG contrast, radii, typography) together with the site's UI principles. `app/globals.css` defines the tokens as CSS variables (light on `:root`, dark via `prefers-color-scheme`), exposes them through `@theme inline` (`bg-base`, `bg-surface`, `text-primary`, `text-muted`, `bg-accent`, `border-border`, `text-error`, `text-success`, `rounded-pill`, and so on), and adds a global `:focus-visible` ring and a `prefers-reduced-motion` rule. `lib/cn.ts` exports `cn()` (`clsx` + `tailwind-merge`). Tailwind setup was switched from the `@tailwindcss/turbopack` loader to the documented `@tailwindcss/postcss` plugin in `postcss.config.mjs` (the loader rule was removed from `next.config.ts`; `@tailwindcss/postcss` and `postcss` moved to devDependencies). `AGENTS.md`, `README.md`, and `ui-context.md` were updated to match. Verified: `npm run lint` and `npm run build` pass; a temporary probe file confirmed the compiled CSS contains the token utilities and the dark media query (probe removed); `cn()` resolves conflicts (`px-2 px-4` becomes `px-4`) and drops falsy values.
 - Feature 03 (test runner and API-derived types): spec in `context/features/03-test-runner-and-types.md`. Added Vitest 5 (`vitest.config.mts`: node environment, `@/` alias, includes `lib/**/*.test.ts` and `types/**/*.test.ts`; `npm run test` runs `vitest run`). Types were derived from a fresh live API sample (pages 1 to 5, 30 to 32, 60 to 63): `types/api.ts` (`ApiResponse<T>`, `ApiGame`, `GamesPage`, `GamesResponse`), `types/game.ts` (client-safe `Game` without `creator`), `types/sort.ts` (`SortKey` mapped over numeric `Game` keys minus `level` and `rating`, plus `quality`; `SearchSortKey` adds `relevance`), `types/filter.ts` (`FilterState` discriminated by `mode`). `lib/vendor.ts` has `VENDORS`, `Vendor`, and `isVendor`. Tests: `lib/cn.test.ts`, `lib/vendor.test.ts`, `types/filter.test.ts` (17 tests, with `@ts-expect-error` proofs that `tsc` verifies). Verified: `npm run test`, `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass.
 
+- Feature 04 (Persian normalization and `filterGames`): spec in `context/features/04-persian-normalization-and-filter.md`, approved by the owner before implementation. Added `lib/normalize.ts` (`normalizePersian`: Arabic yeh/kaf to Persian, Persian and Arabic-Indic digits to Latin, ZWNJ removed, whitespace collapsed and trimmed, Latin lowercased) and `lib/filter.ts` (`filterGames(games, filter, favoriteIds)`: token-AND search over `title` + `companyName`, vendor OR match, normalized category match, inclusive score range, favorites-only; criteria combine with AND; order kept, input not mutated). Empty-vendor policy 8.3 applied: games without vendors are included while no vendor is selected and excluded once any is selected. Tests: `lib/normalize.test.ts` (7) and `lib/filter.test.ts` (14). Verified: `npm run test` (38 tests), `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass; `lib/` imports no React.
+
 ## In Progress
 
 - None.
 
 ## Next Up
 
-- Step 04 of the Implementation Plan (below): `normalizePersian`, `filterGames`, and the empty-vendor policy.
-- After step 04: step 05 (sorting, quality score, pagination-meta helpers).
+- Step 05 of the Implementation Plan (below): `sortGames`, `qualityScore`, and the pagination-meta and dedupe helpers.
 - README placeholders and the AI Usage assessment are finished in step 14, but each step appends its decisions to the README as it lands.
 
 ## Implementation Plan
@@ -165,7 +166,6 @@ Steps 01 to 03 are done. Steps 04 to 14 follow the build order in `ai-workflow-r
 - Image base URL (resolve in step 06): relative `image` paths (e.g. `game/file-....webp`) returned 404 on `lifelands.ir/`, `/game/`, `/api/v1/game/`, `/uploads/`. Find the real public host/path (browser devtools on the Lifelands site) before implementing 8.1.
 - Load more vs pagination (decide in step 12): pick one and justify (leaning load more, since the API is page-based with `?pageId=N` and filtering is client-side).
 - Client-side filtering only covers loaded items (decide in step 12): how search/filters interact with unloaded pages (729 total, 12 per page).
-- Empty-vendor policy 8.3 (decide in step 04): included / excluded / "unspecified" bucket. Sampled data: 26 of 48 games have an empty array; in a later 117-game sample the field was also missing entirely on 27 games (never `null`), so the policy must cover empty and missing.
 - `revalidate` value for the server fetch (decide in step 06).
 - Which unrequested filter to add for Task 6.3 (decide in step 10).
 - Whether the API supports server-side search via `searchValue` (test in step 06; not tested yet).
@@ -182,6 +182,9 @@ Steps 01 to 03 are done. Steps 04 to 14 follow the build order in `ai-workflow-r
 - Use `?pageId=N` for pagination (`?page=N` is ignored by the API).
 - Do not forward the `creator` object (contains personal data) to the client; map to a minimal game type at the server boundary.
 - Trim category titles when building filter options.
+- Empty-vendor policy 8.3 (decided in step 04): games without vendors are included while no vendor is selected and excluded once any is selected. A vendor filter means "published on this platform". An "unspecified" bucket was rejected because it widens `FilterState.vendors` and adds a fake vendor to the UI for data that is mostly a gap.
+- `filterGames` takes the favorites as a `ReadonlySet<string>` so it does not depend on `useFavorites`, and reads `query` only after narrowing `mode === "search"`. Search is token-AND over normalized `title` + `companyName`.
+- `normalizePersian` lowercases Latin letters so `Lifelands` matches `lifelands`; this goes beyond the brief's list and is covered by a test.
 
 ## Session Notes
 
@@ -195,3 +198,5 @@ Steps 01 to 03 are done. Steps 04 to 14 follow the build order in `ai-workflow-r
 - AI usage (feature 02): the assistant read the feature spec and Next.js CSS docs, found that the color tokens, UI principles, `globals.css`, and `lib/cn.ts` were already in the working tree, then verified them (lint, build, compiled-CSS probe, `cn()` runtime check). It changed the Tailwind wiring to the documented PostCSS plugin and synced `AGENTS.md`, `README.md`, and `ui-context.md`. Color values and contrast figures in `ui-context.md` were taken as already extracted; they were not re-fetched from lifelands.ir in this session.
 - AI usage (implementation plan): the assistant read `README.md`, `project-overview.md`, `architecture.md`, and `ai-workflow-rules.md` and wrote the 12-step plan (steps 03 to 14) in this file, splitting the suggested build order so no step mixes pure logic with UI or server fetching with client interactivity. No code was changed. Also added `AGENTS.md`/`ui-context.md` notes (PowerShell-only file reading, always use `cn()`).
 - AI usage (feature 03): the assistant read the Next.js Vitest guide, sampled the live API (including pages past the end) to confirm field types and the optional vendors field, installed Vitest, and wrote the spec, config, types, vendor guard, and tests. Two things it got wrong first: the initial `npm install -D vitest` failed on a `@types/node` peer conflict (fixed by raising `@types/node` to `^24`), and the first `@ts-expect-error` placement in `types/filter.test.ts` was on the wrong line so `tsc` flagged unused directives (moved above the statement). The `browse`/`search` split of `FilterState` and excluding `level`/`rating` from `SortKey` are assistant proposals to be confirmed by the owner.
+
+- AI usage (feature 04): the assistant wrote the spec, waited for the owner's approval, then implemented `normalizePersian`, `filterGames`, and their tests. Owner-confirmed decisions: the empty-vendor policy (included with no vendor selected, excluded otherwise) and token-AND search. Assistant additions beyond the brief: Latin lowercasing in `normalizePersian` and the `ReadonlySet` favorites parameter. Two things it got wrong first: the initial test helper `makeBrowseFilter` used an `as FilterState` cast (replaced with a typed `CriteriaOverrides` and the discriminant set after the spread), and the first architecture patch put the 8.3 section above the State Model body (moved back). The first test command also failed on a string timeout parameter and was rerun.

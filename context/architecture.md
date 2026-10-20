@@ -38,6 +38,10 @@
   - `description` can be whitespace only.
 - `image` is a relative path (e.g. `game/file-....webp`). The public base URL is unconfirmed: the guessed paths on `lifelands.ir` all returned 404 (see progress tracker).
 
+## Empty Vendor Policy (8.3)
+
+Games with an empty or missing `vitrinThirdPartyVendors` are included while no vendor filter is selected and excluded as soon as any vendor is selected. A vendor filter means "published on this platform", so a game on no platform cannot match it. Sampling showed 26 of 48 games with an empty array and 27 of 117 with the field missing, so excluding them from the default view would hide a large part of the catalog, while an "unspecified" bucket would widen the vendor type and add a fake vendor to the UI for data that is mostly a gap. The API client normalizes a missing field to `[]`, so `filterGames` only deals with arrays.
+
 ## State Model
 
 - **URL (source of truth):** search, vendors, category, sort, favorites-only, score range. Shared links and back/forward restore it exactly.

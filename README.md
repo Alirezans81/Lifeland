@@ -105,8 +105,10 @@ Decided so far:
 - Tailwind CSS for styling, Vazirmatn for typography.
 - `?pageId=N` for pagination.
 - The server maps API games to a minimal type before they reach the client.
+- Empty-vendor policy: games without vendors are shown while no vendor is selected and hidden once any vendor is selected. The vendor filter means "published on this platform", so a game on no platform cannot match it. 26 of 48 sampled games have an empty array and 27 of 117 lack the field, so hiding them by default would drop a large part of the catalog. An "unspecified" bucket was rejected because it would widen the vendor type and add a fake vendor to the UI for data that is mostly a gap.
+- Search normalizes both the query and the data (`normalizePersian`) and requires every query word to match `title` or `companyName`, in any order.
 
-To be decided and documented here as they are implemented: load more vs pagination, `revalidate` value and why, empty-vendor policy, `total` vs array length mismatch handling, quality score formula, extra filter, TypeScript decisions (vendor union and guard, filter-state union, `SortKey`), and which components are Server Components and why.
+To be decided and documented here as they are implemented: load more vs pagination, `revalidate` value and why, `total` vs array length mismatch handling, quality score formula, extra filter, TypeScript decisions (vendor union and guard, filter-state union, `SortKey`), and which components are Server Components and why.
 
 ## Documentation
 
