@@ -107,8 +107,10 @@ Decided so far:
 - The server maps API games to a minimal type before they reach the client.
 - Empty-vendor policy: games without vendors are shown while no vendor is selected and hidden once any vendor is selected. The vendor filter means "published on this platform", so a game on no platform cannot match it. 26 of 48 sampled games have an empty array and 27 of 117 lack the field, so hiding them by default would drop a large part of the catalog. An "unspecified" bucket was rejected because it would widen the vendor type and add a fake vendor to the UI for data that is mostly a gap.
 - Search normalizes both the query and the data (`normalizePersian`) and requires every query word to match `title` or `companyName`, in any order.
+- Quality score: `0.5 * score / 5 + 0.3 * rating / 1.2 + 0.2 * ln(1 + like) / ln(26)`, each term clamped to 0..1, so the result is 0 to 1. The scales are fixed caps taken from a live sample (`score` up to 5, `rating` up to 1.19, `like` up to 25), so a game's quality never changes when more pages load. `like` is log-scaled so a few popular games do not dominate. A game with `score` 0 and a nonzero `rating` still gets credit for `rating` and `like`. `level`, `runCount`, and `seenCount` are not part of it (the last two have their own sort options). All sorts are descending with `_id` as the tie-break.
+- `total` mismatch: load more stops on an empty page, on a page shorter than `eachPerPage`, or once the unique loaded count reaches `total`. A missing or invalid `total` falls back to the empty and short-page rules, so it can never loop forever. Games are deduplicated by `_id` when pages are merged.
 
-To be decided and documented here as they are implemented: load more vs pagination, `revalidate` value and why, `total` vs array length mismatch handling, quality score formula, extra filter, TypeScript decisions (vendor union and guard, filter-state union, `SortKey`), and which components are Server Components and why.
+To be decided and documented here as they are implemented: load more vs pagination, `revalidate` value and why, extra filter, TypeScript decisions (vendor union and guard, filter-state union, `SortKey`), and which components are Server Components and why.
 
 ## Documentation
 

@@ -4,11 +4,11 @@ Update this file after every meaningful implementation change.
 
 ## Current Phase
 
-- Foundation: Next.js 16 scaffolded, RTL and Persian font configured, Tailwind v4 with Lifelands color tokens and `cn()`, Vitest wired, API-derived types and the vendor guard in place. The pure `lib/` data layer has normalization and filtering; sort and quality score are not started.
+- Foundation: Next.js 16 scaffolded, RTL and Persian font configured, Tailwind v4 with Lifelands color tokens and `cn()`, Vitest wired, API-derived types and the vendor guard in place. The pure `lib/` data layer is complete: normalization, filtering, sorting, quality score, and pagination-meta helpers. The API client is next.
 
 ## Current Goal
 
-- Step 05: sorting, quality score, and pagination-meta helpers (pure `lib/`, with tests). See Implementation Plan.
+- Step 06: API client, boundary validation, image URL, and proxy route. See Implementation Plan.
 
 ## Completed
 
@@ -21,18 +21,20 @@ Update this file after every meaningful implementation change.
 
 - Feature 04 (Persian normalization and `filterGames`): spec in `context/features/04-persian-normalization-and-filter.md`, approved by the owner before implementation. Added `lib/normalize.ts` (`normalizePersian`: Arabic yeh/kaf to Persian, Persian and Arabic-Indic digits to Latin, ZWNJ removed, whitespace collapsed and trimmed, Latin lowercased) and `lib/filter.ts` (`filterGames(games, filter, favoriteIds)`: token-AND search over `title` + `companyName`, vendor OR match, normalized category match, inclusive score range, favorites-only; criteria combine with AND; order kept, input not mutated). Empty-vendor policy 8.3 applied: games without vendors are included while no vendor is selected and excluded once any is selected. Tests: `lib/normalize.test.ts` (7) and `lib/filter.test.ts` (14). Verified: `npm run test` (38 tests), `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass; `lib/` imports no React.
 
+- Feature 05 (sort, quality score, pagination-meta): spec in `context/features/05-sort-quality-and-pagination-meta.md`, approved by the owner before implementation. Added `lib/quality.ts` (`qualityScore`: `0.5 * score / 5 + 0.3 * rating / 1.2 + 0.2 * ln(1 + like) / ln(26)`, terms clamped to 0..1, fixed caps), `lib/sort.ts` (`sortGames(games, key: SortKey)`: descending, `_id` ascending tie-break, new array), and `lib/pagination.ts` (`getNextPageId`, `describePageMismatch`, `mergeGames`, `PageMeta`, `PageMismatch`). The caps were re-checked against a live sample of 93 games (`score` 0 to 5, `rating` 0 to 1.19, `like` 0 to 25; 2 games with score 0 and a nonzero rating) and needed no change. Tests: `lib/quality.test.ts` (7), `lib/sort.test.ts` (11), `lib/pagination.test.ts` (21). Formula and mismatch rules are in `architecture.md` and the README. Verified: `npm run test` (77 tests), `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass; `lib/` imports no React.
+
 ## In Progress
 
 - None.
 
 ## Next Up
 
-- Step 05 of the Implementation Plan (below): `sortGames`, `qualityScore`, and the pagination-meta and dedupe helpers.
+- Step 06 of the Implementation Plan (below): resolve the image base URL, `resolveImageUrl`, the server API client with boundary validation, and `app/api/games/route.ts`.
 - README placeholders and the AI Usage assessment are finished in step 14, but each step appends its decisions to the README as it lands.
 
 ## Implementation Plan
 
-Steps 01 to 03 are done. Steps 04 to 14 follow the build order in `ai-workflow-rules.md` but are sized so each one is verifiable end to end and never mixes pure logic with UI, or server fetching with client interactivity. Each step gets a spec in `context/features/NN-name.md` when it starts. Every step ends with the "Before Finishing a Unit" checklist in `AGENTS.md` (tests for touched `lib/` code, `npm run build`, tracker and AI usage log updated).
+Steps 01 to 05 are done. Steps 06 to 14 follow the build order in `ai-workflow-rules.md` but are sized so each one is verifiable end to end and never mixes pure logic with UI, or server fetching with client interactivity. Each step gets a spec in `context/features/NN-name.md` when it starts. Every step ends with the "Before Finishing a Unit" checklist in `AGENTS.md` (tests for touched `lib/` code, `npm run build`, tracker and AI usage log updated).
 
 ### Step 01: Init Next.js project (done)
 
@@ -67,7 +69,9 @@ Steps 01 to 03 are done. Steps 04 to 14 follow the build order in `ai-workflow-r
 - Done when: tests pass and `lib/` imports no React.
 - Covers: Persian-aware search, vendor/category/score filters, 8.3, minimum unit tests.
 
-### Step 05: Sorting, quality score, and pagination-meta helpers
+### Step 05: Sorting, quality score, and pagination-meta helpers (done)
+
+- Spec: `context/features/05-sort-quality-and-pagination-meta.md`.
 
 - Scope (pure `lib/`): `sortGames` accepting only valid `SortKey`s (`score`, `runCount`, `seenCount`, `like`, `quality`) with a stable order and an explicit tie-break on `_id`; `qualityScore` blending `score`, `rating`, and `like` (8.2: `score` may be 0 while `rating` is nonzero; `level` stays separate), normalized so no single field dominates; document the formula in the README.
 - 8.4 helper: a function that compares `total` and `eachPerPage` with the actual `games.length` and returns whether more pages exist, tolerating a short, long, or empty page without looping forever; plus a dedupe-by-`_id` merge for appended pages.
@@ -200,3 +204,5 @@ Steps 01 to 03 are done. Steps 04 to 14 follow the build order in `ai-workflow-r
 - AI usage (feature 03): the assistant read the Next.js Vitest guide, sampled the live API (including pages past the end) to confirm field types and the optional vendors field, installed Vitest, and wrote the spec, config, types, vendor guard, and tests. Two things it got wrong first: the initial `npm install -D vitest` failed on a `@types/node` peer conflict (fixed by raising `@types/node` to `^24`), and the first `@ts-expect-error` placement in `types/filter.test.ts` was on the wrong line so `tsc` flagged unused directives (moved above the statement). The `browse`/`search` split of `FilterState` and excluding `level`/`rating` from `SortKey` are assistant proposals to be confirmed by the owner.
 
 - AI usage (feature 04): the assistant wrote the spec, waited for the owner's approval, then implemented `normalizePersian`, `filterGames`, and their tests. Owner-confirmed decisions: the empty-vendor policy (included with no vendor selected, excluded otherwise) and token-AND search. Assistant additions beyond the brief: Latin lowercasing in `normalizePersian` and the `ReadonlySet` favorites parameter. Two things it got wrong first: the initial test helper `makeBrowseFilter` used an `as FilterState` cast (replaced with a typed `CriteriaOverrides` and the discriminant set after the spread), and the first architecture patch put the 8.3 section above the State Model body (moved back). The first test command also failed on a string timeout parameter and was rerun.
+
+- AI usage (feature 05): the assistant wrote the spec, waited for the owner's approval, re-checked the quality caps against a fresh live sample of 93 games (no change needed), then implemented `qualityScore`, `sortGames`, and the pagination-meta helpers with tests. Owner-confirmed decisions: weights 0.5 / 0.3 / 0.2 with caps 5, 1.2, and 25, descending-only sorts, `_id` tie-break, and a short page ending load more. The formula, the log scale for `like`, and the `describePageMismatch` categories are assistant proposals. Docs patches for `architecture.md` and the tracker failed on the first try (the anchor text was inside a longer line) and were redone with exact string replacement.
