@@ -4,11 +4,11 @@ Update this file after every meaningful implementation change.
 
 ## Current Phase
 
-- Foundation: Next.js 16 scaffolded, RTL and Persian font configured, Tailwind v4 with Lifelands color tokens and `cn()`, Vitest wired, API-derived types and the vendor guard in place. The pure `lib/` data layer (normalization, filter, sort, quality score) is not started.
+- Steps 01–09: completed. Step 09 (Explorer shell with search, URL state, result count, and empty state) is implemented, including debounced search, focus preservation, and browser Back/Forward synchronization.
 
 ## Current Goal
 
-- Step 04: Persian normalization and `filterGames` (pure `lib/`, with tests). See Implementation Plan.
+- None
 
 ## Completed
 
@@ -19,19 +19,30 @@ Update this file after every meaningful implementation change.
 - Feature 02 (init UI themes): colors extracted from lifelands.ir and documented in `context/ui-context.md` (source table, light/dark tokens, measured WCAG contrast, radii, typography) together with the site's UI principles. `app/globals.css` defines the tokens as CSS variables (light on `:root`, dark via `prefers-color-scheme`), exposes them through `@theme inline` (`bg-base`, `bg-surface`, `text-primary`, `text-muted`, `bg-accent`, `border-border`, `text-error`, `text-success`, `rounded-pill`, and so on), and adds a global `:focus-visible` ring and a `prefers-reduced-motion` rule. `lib/cn.ts` exports `cn()` (`clsx` + `tailwind-merge`). Tailwind setup was switched from the `@tailwindcss/turbopack` loader to the documented `@tailwindcss/postcss` plugin in `postcss.config.mjs` (the loader rule was removed from `next.config.ts`; `@tailwindcss/postcss` and `postcss` moved to devDependencies). `AGENTS.md`, `README.md`, and `ui-context.md` were updated to match. Verified: `npm run lint` and `npm run build` pass; a temporary probe file confirmed the compiled CSS contains the token utilities and the dark media query (probe removed); `cn()` resolves conflicts (`px-2 px-4` becomes `px-4`) and drops falsy values.
 - Feature 03 (test runner and API-derived types): spec in `context/features/03-test-runner-and-types.md`. Added Vitest 5 (`vitest.config.mts`: node environment, `@/` alias, includes `lib/**/*.test.ts` and `types/**/*.test.ts`; `npm run test` runs `vitest run`). Types were derived from a fresh live API sample (pages 1 to 5, 30 to 32, 60 to 63): `types/api.ts` (`ApiResponse<T>`, `ApiGame`, `GamesPage`, `GamesResponse`), `types/game.ts` (client-safe `Game` without `creator`), `types/sort.ts` (`SortKey` mapped over numeric `Game` keys minus `level` and `rating`, plus `quality`; `SearchSortKey` adds `relevance`), `types/filter.ts` (`FilterState` discriminated by `mode`). `lib/vendor.ts` has `VENDORS`, `Vendor`, and `isVendor`. Tests: `lib/cn.test.ts`, `lib/vendor.test.ts`, `types/filter.test.ts` (17 tests, with `@ts-expect-error` proofs that `tsc` verifies). Verified: `npm run test`, `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass.
 
+- Feature 04 (Persian normalization and `filterGames`): spec in `context/features/04-persian-normalization-and-filter.md`, approved by the owner before implementation. Added `lib/normalize.ts` (`normalizePersian`: Arabic yeh/kaf to Persian, Persian and Arabic-Indic digits to Latin, ZWNJ removed, whitespace collapsed and trimmed, Latin lowercased) and `lib/filter.ts` (`filterGames(games, filter, favoriteIds)`: token-AND search over `title` + `companyName`, vendor OR match, normalized category match, inclusive score range, favorites-only; criteria combine with AND; order kept, input not mutated). Empty-vendor policy 8.3 applied: games without vendors are included while no vendor is selected and excluded once any is selected. Tests: `lib/normalize.test.ts` (7) and `lib/filter.test.ts` (14). Verified: `npm run test` (38 tests), `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass; `lib/` imports no React.
+
+- Feature 05 (sort, quality score, pagination-meta): spec in `context/features/05-sort-quality-and-pagination-meta.md`, approved by the owner before implementation. Added `lib/quality.ts` (`qualityScore`: `0.5 * score / 5 + 0.3 * rating / 1.2 + 0.2 * ln(1 + like) / ln(26)`, terms clamped to 0..1, fixed caps), `lib/sort.ts` (`sortGames(games, key: SortKey)`: descending, `_id` ascending tie-break, new array), and `lib/pagination.ts` (`getNextPageId`, `describePageMismatch`, `mergeGames`, `PageMeta`, `PageMismatch`). The caps were re-checked against a live sample of 93 games (`score` 0 to 5, `rating` 0 to 1.19, `like` 0 to 25; 2 games with score 0 and a nonzero rating) and needed no change. Tests: `lib/quality.test.ts` (7), `lib/sort.test.ts` (11), `lib/pagination.test.ts` (21). Formula and mismatch rules are in `architecture.md` and the README. Verified: `npm run test` (77 tests), `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass; `lib/` imports no React.
+
+- Feature 06 (API client, boundary validation, image URL, proxy route): spec in `context/features/06-api-client-and-proxy-route.md`, approved by the owner before implementation. Added `lib/image.ts` (`IMAGE_BASE_URL = "https://dl.lifelands.ir/"`, `resolveImageUrl`), `lib/page-id.ts` (`parsePageIdParam`: absent means page 1, only integers 1 to `MAX_PAGE_ID` (1000) pass), `lib/parse-games.ts` (`parseGamesPage`: unknown JSON to `Game[]` with type guards, drops `creator`, trims titles and categories, drops malformed games, reports `receivedCount` as the raw array length), `lib/games-client.ts` (`fetchGamesPage` with a 10 second timeout and typed errors `network`, `upstream-status`, `invalid-json`, `invalid-payload`), `app/_data/get-games-page.ts` (`"use cache"`, success `cacheLife({ stale: 60, revalidate: 300, expire: 3600 })`, failure `cacheLife("seconds")`), and `app/api/games/route.ts` (400 `invalid-page-id`, 502 `upstream-unavailable` or `invalid-upstream-payload`, 200 `{ games, pageId, total, eachPerPage, receivedCount }`). Tests: `lib/image.test.ts`, `lib/page-id.test.ts`, `lib/parse-games.test.ts`, `lib/games-client.test.ts` (113 tests overall). Verified: `npm run test`, `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass (`/api/games` is dynamic). On the dev server: `?pageId=1` and no parameter return the same 12 games with `total` 729, `eachPerPage` 12, `receivedCount` 12, vendors arrays, trimmed categories, and no `creator`; `pageId` of `0`, `abc`, `-1`, `1.5`, and `99999` return 400 with the error shape; `pageId=100` returns 200 with `games: []`; repeat requests were served in about 70 ms. No file under `components/`, `hooks/`, or `app/` mentions `lifelands.ir`; only `lib/games-client.ts` and `lib/image.ts` hold the hosts. Not verified at runtime: the short-lived `cacheLife("seconds")` failure branch, because the upstream could not be made to fail on demand; it was only seen compiling in the build. The documented fallback (throw in `getGamesPage` and map to 502 in the route so a failure is never stored) is not needed unless this branch is shown to cache errors.
+
+- Feature 07 (server-rendered first page and game card): implemented the server-rendered first page using `GamesSection` inside `Suspense`, with a matching loading skeleton, responsive game grid, `GameCard` displaying game details and vendor badges, and an image fallback. The initial 12 games are fetched on the server through `getGamesPage(1)`. Added `remotePatterns` for `dl.lifelands.ir` in `next.config.ts`. The page and card remain Server Components; client-side interactivity is deferred to later steps.
+
+- Feature 08 (hooks): implemented `useDebounce`, `useUrlState`, and `useFavorites`, with URL serialization/deserialization and SSR-safe favorites storage helpers. Step 08 is complete. Record the actual verification results here if the hooks were tested independently and the build passed.
+
+- Feature 09 (Explorer shell with search and URL state): implemented the client-side `GameExplorer` using the first 12 games fetched on the server. Added accessible search with a 350ms debounce, Persian-aware filtering, URL-backed query state (`q`), memoized filtering and sorting, a Persian result count with `aria-live="polite"`, and an empty state with a reset action. Extracted `SearchInput` to preserve input focus during URL updates and synchronize the draft query with browser Back/Forward navigation. Updated `useUrlState` to track the last committed value and clear pending navigation state on `popstate`, preventing stale debounced values from overwriting browser history. Manual verification confirmed that typing retains focus and Back/Forward navigation works.
+
 ## In Progress
 
 - None.
 
 ## Next Up
 
-- Step 04 of the Implementation Plan (below): `normalizePersian`, `filterGames`, and the empty-vendor policy.
-- After step 04: step 05 (sorting, quality score, pagination-meta helpers).
-- README placeholders and the AI Usage assessment are finished in step 14, but each step appends its decisions to the README as it lands.
+- Step 10: config-driven filters, toolbar, and sorting.
+- Steps 11–14 remain planned: favorites UI, race-safe load more, accessibility and performance polish, README completion, and deployment.
 
 ## Implementation Plan
 
-Steps 01 to 03 are done. Steps 04 to 14 follow the build order in `ai-workflow-rules.md` but are sized so each one is verifiable end to end and never mixes pure logic with UI, or server fetching with client interactivity. Each step gets a spec in `context/features/NN-name.md` when it starts. Every step ends with the "Before Finishing a Unit" checklist in `AGENTS.md` (tests for touched `lib/` code, `npm run build`, tracker and AI usage log updated).
+Steps 01 to 06 are done. Steps 07 to 14 follow the build order in `ai-workflow-rules.md` but are sized so each one is verifiable end to end and never mixes pure logic with UI, or server fetching with client interactivity. Each step gets a spec in `context/features/NN-name.md` when it starts. Every step ends with the "Before Finishing a Unit" checklist in `AGENTS.md` (tests for touched `lib/` code, `npm run build`, tracker and AI usage log updated).
 
 ### Step 01: Init Next.js project (done)
 
@@ -58,7 +69,7 @@ Steps 01 to 03 are done. Steps 04 to 14 follow the build order in `ai-workflow-r
 - Done: `npm run test` (17 tests), `npx tsc --noEmit`, `npm run lint`, and `npm run build` pass; no `any` or `as unknown as`.
 - Covers: 5.1, 5.2, 5.3, 5.4, test-runner decision.
 
-### Step 04: Persian normalization and `filterGames`
+### Step 04: Persian normalization and `filterGames` (done)
 
 - Scope (pure `lib/`, no React): `normalizePersian` (ی/ي and ک/ك unification, Persian and Arabic digits to Latin, ZWNJ removal, whitespace collapse and trim); `filterGames` for search over `title` and `companyName` (normalized on both sides), vendor multi-select, category (trimmed titles), score range, and favorites-only (accepts an id set).
 - Apply the empty-vendor policy (8.3) here: pick included, excluded, or an "unspecified" bucket, based on the sampled data (26 of 48 games have none), and record the one-paragraph justification in `architecture.md` and the README.
@@ -66,7 +77,9 @@ Steps 01 to 03 are done. Steps 04 to 14 follow the build order in `ai-workflow-r
 - Done when: tests pass and `lib/` imports no React.
 - Covers: Persian-aware search, vendor/category/score filters, 8.3, minimum unit tests.
 
-### Step 05: Sorting, quality score, and pagination-meta helpers
+### Step 05: Sorting, quality score, and pagination-meta helpers (done)
+
+- Spec: `context/features/05-sort-quality-and-pagination-meta.md`.
 
 - Scope (pure `lib/`): `sortGames` accepting only valid `SortKey`s (`score`, `runCount`, `seenCount`, `like`, `quality`) with a stable order and an explicit tie-break on `_id`; `qualityScore` blending `score`, `rating`, and `like` (8.2: `score` may be 0 while `rating` is nonzero; `level` stays separate), normalized so no single field dominates; document the formula in the README.
 - 8.4 helper: a function that compares `total` and `eachPerPage` with the actual `games.length` and returns whether more pages exist, tolerating a short, long, or empty page without looping forever; plus a dedupe-by-`_id` merge for appended pages.
@@ -74,7 +87,7 @@ Steps 01 to 03 are done. Steps 04 to 14 follow the build order in `ai-workflow-r
 - Done when: tests pass; formula and mismatch behavior are written down.
 - Covers: 8.2, 8.4 (logic), sort options, remaining `lib/` unit tests.
 
-### Step 06: API client, boundary validation, image URL, and proxy route
+### Step 06: API client, boundary validation, image URL, and proxy route (done)
 
 - Scope: first resolve the open image question (find the real public host/path for relative `image` values via the live site or devtools; record it in `architecture.md`), then implement `resolveImageUrl` as a pure `lib/` function with tests.
 - Server-only API client: fetch `GET /api/v1/games?pageId=N`, validate the unknown JSON at the boundary (envelope `state`, field types), map to `Game` (drop `creator`, trim category titles), and return a typed result or a typed error.
@@ -83,16 +96,16 @@ Steps 01 to 03 are done. Steps 04 to 14 follow the build order in `ai-workflow-r
 - Done when: the route returns real data locally, malformed input returns a 400, and the browser never needs the Lifelands host.
 - Covers: proxy requirement, API boundary validation, revalidate decision, 8.1 (URL resolution).
 
-### Step 07: Server-rendered first page, game card, skeleton, and image fallback
+### Step 07: Server-rendered first page, game card, skeleton, and image fallback (done)
 
 - Scope (no filtering yet): the page stays a Server Component; the first page (12 games) is fetched in a Server Component and rendered inside `<Suspense>` with a skeleton that reuses the exact card dimensions and grid columns (no CLS). Decide whether `loading.tsx` is also used and explain route-level vs component-level streaming in the README.
-- `GameCard` (Server Component by default): fixed image aspect ratio, title, company, vendor badges, score/like/run stats with Persian tabular digits, tokens from `ui-context.md`, `cn()` for merged classes, logical properties only.
+- `GameCard` (client component since step 09, memoized with `React.memo`): fixed image aspect ratio, title, company, vendor badges, score/like/run stats with Persian tabular digits, tokens from `ui-context.md`, `cn()` for merged classes, logical properties only.
 - Image: `next/image` with explicit dimensions and lazy loading below the fold; a small client leaf that swaps to a placeholder rendered inside the same card box on error (8.1), not just hiding the image.
 - Persian section header and storytelling line; responsive grid.
 - Done when: the page renders 12 real cards in server HTML, the skeleton matches final dimensions, a broken image keeps the layout, and build passes.
 - Covers: server render, Suspense and skeleton, card UI, 8.1 fallback, README list of Server vs Client components (started).
 
-### Step 08: Hooks
+### Step 08: Hooks (done)
 
 - Scope: `useDebounce<T>(value, delay)`, `useUrlState<T>(key, defaultValue): [T, (v: T) => void]` (reads and writes the URL via the Next.js navigation APIs, serializes arrays and numbers, uses `replace` for typing and `push` where back/forward should restore), and `useFavorites()` returning `{ favorites: Set<string>; toggle }` (`localStorage`, SSR-safe so there is no hydration mismatch, handles storage being unavailable or corrupt).
 - Each hook is independent and imports no other hook's internals. Add a jsdom and testing-library setup only if needed to test them; otherwise cover the serialization and storage parsing as pure `lib/` helpers with tests.
@@ -101,7 +114,7 @@ Steps 01 to 03 are done. Steps 04 to 14 follow the build order in `ai-workflow-r
 
 ### Step 09: Explorer shell with search, URL state, and empty state
 
-- Scope: a client `GameExplorer` leaf that receives the server-fetched first page, owns interactivity, and renders the toolbar slot, grid, and result count. Search box (accessible label, 300ms debounce via `useDebounce`, input draft kept in local state, committed value in the URL via `useUrlState`). Filtering and sorting memoized with `useMemo` on `filterGames`/`sortGames`; memoized card component; `aria-live="polite"` result count.
+- Scope: a client `GameExplorer` leaf that receives the server-fetched first page, owns interactivity, and renders the toolbar slot, grid, and result count. Search box (accessible label, 350ms debounce via `useDebounce`, input draft kept in local state, committed value in the URL via `useUrlState`). Filtering and sorting memoized with `useMemo` on `filterGames`/`sortGames`; memoized card component; `aria-live="polite"` result count.
 - Empty state with a "reset filters" action that clears the URL state; also the error state with retry hook-up point.
 - Done when: typing filters Persian text correctly (ی/ي, digits), the URL updates, reloading or sharing the link restores the same view, and typing stays responsive.
 - Covers: search UX, URL as source of truth (search part), empty state, memoization.
@@ -162,11 +175,8 @@ Steps 01 to 03 are done. Steps 04 to 14 follow the build order in `ai-workflow-r
 
 ## Open Questions
 
-- Image base URL (resolve in step 06): relative `image` paths (e.g. `game/file-....webp`) returned 404 on `lifelands.ir/`, `/game/`, `/api/v1/game/`, `/uploads/`. Find the real public host/path (browser devtools on the Lifelands site) before implementing 8.1.
 - Load more vs pagination (decide in step 12): pick one and justify (leaning load more, since the API is page-based with `?pageId=N` and filtering is client-side).
 - Client-side filtering only covers loaded items (decide in step 12): how search/filters interact with unloaded pages (729 total, 12 per page).
-- Empty-vendor policy 8.3 (decide in step 04): included / excluded / "unspecified" bucket. Sampled data: 26 of 48 games have an empty array; in a later 117-game sample the field was also missing entirely on 27 games (never `null`), so the policy must cover empty and missing.
-- `revalidate` value for the server fetch (decide in step 06).
 - Which unrequested filter to add for Task 6.3 (decide in step 10).
 - Whether the API supports server-side search via `searchValue` (test in step 06; not tested yet).
 
@@ -182,6 +192,9 @@ Steps 01 to 03 are done. Steps 04 to 14 follow the build order in `ai-workflow-r
 - Use `?pageId=N` for pagination (`?page=N` is ignored by the API).
 - Do not forward the `creator` object (contains personal data) to the client; map to a minimal game type at the server boundary.
 - Trim category titles when building filter options.
+- Empty-vendor policy 8.3 (decided in step 04): games without vendors are included while no vendor is selected and excluded once any is selected. A vendor filter means "published on this platform". An "unspecified" bucket was rejected because it widens `FilterState.vendors` and adds a fake vendor to the UI for data that is mostly a gap.
+- `filterGames` takes the favorites as a `ReadonlySet<string>` so it does not depend on `useFavorites`, and reads `query` only after narrowing `mode === "search"`. Search is token-AND over normalized `title` + `companyName`.
+- `normalizePersian` lowercases Latin letters so `Lifelands` matches `lifelands`; this goes beyond the brief's list and is covered by a test.
 
 ## Session Notes
 
@@ -195,3 +208,15 @@ Steps 01 to 03 are done. Steps 04 to 14 follow the build order in `ai-workflow-r
 - AI usage (feature 02): the assistant read the feature spec and Next.js CSS docs, found that the color tokens, UI principles, `globals.css`, and `lib/cn.ts` were already in the working tree, then verified them (lint, build, compiled-CSS probe, `cn()` runtime check). It changed the Tailwind wiring to the documented PostCSS plugin and synced `AGENTS.md`, `README.md`, and `ui-context.md`. Color values and contrast figures in `ui-context.md` were taken as already extracted; they were not re-fetched from lifelands.ir in this session.
 - AI usage (implementation plan): the assistant read `README.md`, `project-overview.md`, `architecture.md`, and `ai-workflow-rules.md` and wrote the 12-step plan (steps 03 to 14) in this file, splitting the suggested build order so no step mixes pure logic with UI or server fetching with client interactivity. No code was changed. Also added `AGENTS.md`/`ui-context.md` notes (PowerShell-only file reading, always use `cn()`).
 - AI usage (feature 03): the assistant read the Next.js Vitest guide, sampled the live API (including pages past the end) to confirm field types and the optional vendors field, installed Vitest, and wrote the spec, config, types, vendor guard, and tests. Two things it got wrong first: the initial `npm install -D vitest` failed on a `@types/node` peer conflict (fixed by raising `@types/node` to `^24`), and the first `@ts-expect-error` placement in `types/filter.test.ts` was on the wrong line so `tsc` flagged unused directives (moved above the statement). The `browse`/`search` split of `FilterState` and excluding `level`/`rating` from `SortKey` are assistant proposals to be confirmed by the owner.
+
+- AI usage (feature 04): the assistant wrote the spec, waited for the owner's approval, then implemented `normalizePersian`, `filterGames`, and their tests. Owner-confirmed decisions: the empty-vendor policy (included with no vendor selected, excluded otherwise) and token-AND search. Assistant additions beyond the brief: Latin lowercasing in `normalizePersian` and the `ReadonlySet` favorites parameter. Two things it got wrong first: the initial test helper `makeBrowseFilter` used an `as FilterState` cast (replaced with a typed `CriteriaOverrides` and the discriminant set after the spread), and the first architecture patch put the 8.3 section above the State Model body (moved back). The first test command also failed on a string timeout parameter and was rerun.
+
+- AI usage (feature 05): the assistant wrote the spec, waited for the owner's approval, re-checked the quality caps against a fresh live sample of 93 games (no change needed), then implemented `qualityScore`, `sortGames`, and the pagination-meta helpers with tests. Owner-confirmed decisions: weights 0.5 / 0.3 / 0.2 with caps 5, 1.2, and 25, descending-only sorts, `_id` tie-break, and a short page ending load more. The formula, the log scale for `like`, and the `describePageMismatch` categories are assistant proposals. Docs patches for `architecture.md` and the tracker failed on the first try (the anchor text was inside a longer line) and were redone with exact string replacement.
+
+- AI usage (feature 06): the assistant wrote the spec, waited for the owner's approval, found the image host (`https://dl.lifelands.ir/`) in the site's JS bundle and confirmed it with HEAD requests on real image paths (200 with the right content type; an invented path returned 404), read the Cache Components docs for `"use cache"` and `cacheLife`, then implemented the modules above with fixture tests. Owner-confirmed decisions: revalidate every 5 minutes with a one hour expiry, short-lived caching for upstream errors, `receivedCount` in the response, malformed games dropped instead of failing the page, and a 1000 page cap. Mistakes caught during the work: two `apply_patch` calls failed because blank lines in added text lacked the `+` prefix, a command used a `timeout_ms` parameter that does not exist (the parameter is `yield_time_ms`), and the first dev server attempts were blocked because the automatic approval review did not complete. A dev server was already running on port 3000, so a second instance fell back to 3001 and exited; manual verification used the existing one.
+
+- AI usage (feature 08): implemented the independent `useDebounce`, `useUrlState`, and `useFavorites` hooks, plus URL serialization/deserialization and SSR-safe favorites storage helpers. Record any implementation corrections and actual verification results before submission.
+
+- Step 09 gaps left open: the error state keeps its static message (`GamesSection`) with no retry hook-up point yet, which the plan listed for this step. It moves to the load-more step, which already owns the client fetch through the route handler.`n- AI usage (feature 07): the assistant implemented `GamesSection`, `GameCard`, the page skeleton, and `remotePatterns`. Review later found gaps that were fixed in the second review pass: no per-image 404 fallback, `companyName`not shown, a hardcoded`.slice(0, 12)`, and a skeleton that did not match the card or explorer layout. The image-host and README notes were stale until then.`n- AI usage (feature 09 second review fixes): `useUrlState` for `q` now uses `history: "replace"`. Added `formatResultCount` (zero, one, many) with tests. Added `GameImage` (client, same-size fallback on load error) and `GamesSkeleton` (own file, mirrors the explorer layout). `GameCard` shows `companyName` with the category as a badge. Removed `.slice(0, 12)`. README streaming, image, history, and Server/Client notes were updated. `GameCard` is memoized and therefore runs on the client; this is documented instead of hidden.`n- AI usage (feature 09 review fixes): addressed a code-standards review. `SearchInput`now commits only when`debouncedQuery === draftQuery`, so a stale debounced value cannot be re-committed after Back/Forward (the root cause, not a reliance on `lastValueRef`or effect order). Split`SearchInput`and`EmptyResults`out of`game-explorer.tsx`. Wrapped `GameCard`in`React.memo`. Moved filter construction and the browse sort into `lib/explore.ts`with tests, removing the duplicated`"score"`key. Verified with`tsc --noEmit`, lint, tests, and build; browser Back/Forward was not re-tested manually.
+
+- AI usage (feature 09): implemented `GameExplorer`, debounced Persian-aware search, URL query synchronization, memoized filtering/sorting, result count, and empty state. Fixed input focus loss by removing key-based remounting and synchronizing the search input with URL state. Fixed Back/Forward history being overwritten by stale debounced values by tracking the last committed value in `useUrlState` and clearing pending navigation state on `popstate`. Manual interaction tests passed for continuous typing, focus preservation, and browser history navigation. Final automated verification is still to be recorded.
