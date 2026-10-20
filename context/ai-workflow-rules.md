@@ -54,7 +54,6 @@ Undisclosed AI use is grounds for rejection. Keep a running log in `progress-tra
 
 Do not modify unless explicitly instructed:
 
-- `lifelands-technical-assignment.md` (the brief).
 - Generated or third-party code (`node_modules`, `.next`).
 
 ## Keeping Docs in Sync

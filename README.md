@@ -1,6 +1,6 @@
 # Lifelands Game Explorer
 
-A Persian (RTL) Game Explorer for [Lifelands](https://lifelands.ir), built with Next.js 16 (App Router) and strict TypeScript. It renders games from `GET https://lifelands.ir/api/v1/games` as a searchable, filterable, sortable grid. This is a single-section frontend assignment; the full brief is `lifelands-technical-assignment.md`.
+A Persian (RTL) Game Explorer for [Lifelands](https://lifelands.ir), built with Next.js 16 (App Router) and strict TypeScript. It renders games from `GET https://lifelands.ir/api/v1/games` as a searchable, filterable, sortable grid. This is a single-section frontend assignment.
 
 > **Status:** project setup only (Next.js scaffold, RTL layout, Persian font). The Game Explorer features below are planned and not implemented yet. See `context/progress-tracker.md` for the current state.
 
@@ -16,7 +16,7 @@ A Persian (RTL) Game Explorer for [Lifelands](https://lifelands.ir), built with 
 | Lint      | ESLint 9 with `eslint-config-next`                   |
 | Data      | Lifelands REST API (read-only, public, no auth)      |
 | Storage   | Browser `localStorage` (favorites only, planned)     |
-| Testing   | Test runner not chosen yet (Vitest is the candidate) |
+| Testing   | Vitest (node environment)                            |
 | Hosting   | Vercel or Netlify (not deployed yet)                 |
 
 Node.js `v24.14.0` was used for development. Exact installed versions are pinned in `package-lock.json`.
@@ -38,6 +38,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `npm run build` | Production build and type check |
 | `npm run start` | Serve the production build      |
 | `npm run lint`  | Run ESLint                      |
+| `npm run test`  | Run unit and type tests (Vitest) |
 
 No environment variables or API keys are required. `.env*` files are git-ignored and must never be committed.
 
