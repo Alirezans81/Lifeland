@@ -21,11 +21,16 @@ export function useUrlState<T>(
   const history = options.history ?? "push";
 
   const pendingUrlRef = useRef<string | null>(null);
+  const lastValueRef = useRef<T>(defaultValue);
 
   const value = useMemo(
     () => deserializeUrlValue(queryValue, defaultValue),
     [queryValue, defaultValue],
   );
+
+  useEffect(() => {
+    lastValueRef.current = value;
+  }, [value]);
 
   useEffect(() => {
     const pendingUrl = pendingUrlRef.current;
@@ -60,6 +65,10 @@ export function useUrlState<T>(
         window.location.origin,
       );
 
+      if (JSON.stringify(nextValue) === JSON.stringify(lastValueRef.current)) {
+        return;
+      }
+
       if (JSON.stringify(nextValue) === JSON.stringify(defaultValue)) {
         currentUrl.searchParams.delete(key);
       } else {
@@ -69,6 +78,7 @@ export function useUrlState<T>(
       const url = currentUrl.pathname + currentUrl.search + currentUrl.hash;
 
       pendingUrlRef.current = url;
+      lastValueRef.current = nextValue;
 
       if (history === "replace") {
         router.replace(url, { scroll: false });

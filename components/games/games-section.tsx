@@ -1,5 +1,5 @@
 import { getGamesPage } from "@/app/_data/get-games-page";
-import { GameCard } from "@/components/games/game-card";
+import { GameExplorer } from "@/components/games/game-explorer";
 
 export async function GamesSection() {
   const result = await getGamesPage(1);
@@ -22,11 +22,5 @@ export async function GamesSection() {
     );
   }
 
-  return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {games.map((game) => (
-        <GameCard key={game._id} game={game} />
-      ))}
-    </div>
-  );
+  return <GameExplorer games={games} />;
 }

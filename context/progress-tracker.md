@@ -4,7 +4,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Phase
 
-- Foundation and Steps 01–08: Next.js 16 scaffolded, RTL and Persian font configured, Tailwind v4 theme tokens and `cn()` in place, Vitest configured, API-derived types and the pure `lib/` data layer complete. The server data boundary is implemented: image URL resolution, API payload validation, cached `getGamesPage`, and `/api/games` proxy route. Step 07 adds the server-rendered first page, game cards, skeleton, and image fallback. Step 08 adds the independent `useDebounce`, `useUrlState`, and `useFavorites` hooks, along with URL serialization and SSR-safe favorites storage helpers.
+- Steps 01–09: completed. Step 09 (Explorer shell with search, URL state, result count, and empty state) is implemented, including debounced search, focus preservation, and browser Back/Forward synchronization.
 
 ## Current Goal
 
@@ -29,15 +29,16 @@ Update this file after every meaningful implementation change.
 
 - Feature 08 (hooks): implemented `useDebounce`, `useUrlState`, and `useFavorites`, with URL serialization/deserialization and SSR-safe favorites storage helpers. Step 08 is complete. Record the actual verification results here if the hooks were tested independently and the build passed.
 
+- Feature 09 (Explorer shell with search and URL state): implemented the client-side `GameExplorer` using the first 12 games fetched on the server. Added accessible search with a 500ms debounce, Persian-aware filtering, URL-backed query state (`q`), memoized filtering and sorting, a Persian result count with `aria-live="polite"`, and an empty state with a reset action. Extracted `SearchInput` to preserve input focus during URL updates and synchronize the draft query with browser Back/Forward navigation. Updated `useUrlState` to track the last committed value and clear pending navigation state on `popstate`, preventing stale debounced values from overwriting browser history. Manual verification confirmed that typing retains focus and Back/Forward navigation works.
+
 ## In Progress
 
 - None.
 
 ## Next Up
 
-- Step 09 of the Implementation Plan: build the client-side `GameExplorer` shell, connect debounced search to URL state, memoize filtering and sorting, display the result count, and add empty-state reset behavior.
-- Steps 10–14 remain planned: config-driven filters and sorting, favorites UI, race-safe load more, accessibility and performance polish, and README completion/deployment.
-- README placeholders and the AI Usage assessment are finished in step 14, but each step appends its decisions to the README as it lands.
+- Step 10: config-driven filters, toolbar, and sorting.
+- Steps 11–14 remain planned: favorites UI, race-safe load more, accessibility and performance polish, README completion, and deployment.
 
 ## Implementation Plan
 
@@ -215,3 +216,5 @@ Steps 01 to 06 are done. Steps 07 to 14 follow the build order in `ai-workflow-r
 - AI usage (feature 06): the assistant wrote the spec, waited for the owner's approval, found the image host (`https://dl.lifelands.ir/`) in the site's JS bundle and confirmed it with HEAD requests on real image paths (200 with the right content type; an invented path returned 404), read the Cache Components docs for `"use cache"` and `cacheLife`, then implemented the modules above with fixture tests. Owner-confirmed decisions: revalidate every 5 minutes with a one hour expiry, short-lived caching for upstream errors, `receivedCount` in the response, malformed games dropped instead of failing the page, and a 1000 page cap. Mistakes caught during the work: two `apply_patch` calls failed because blank lines in added text lacked the `+` prefix, a command used a `timeout_ms` parameter that does not exist (the parameter is `yield_time_ms`), and the first dev server attempts were blocked because the automatic approval review did not complete. A dev server was already running on port 3000, so a second instance fell back to 3001 and exited; manual verification used the existing one.
 
 - AI usage (feature 08): implemented the independent `useDebounce`, `useUrlState`, and `useFavorites` hooks, plus URL serialization/deserialization and SSR-safe favorites storage helpers. Record any implementation corrections and actual verification results before submission.
+
+- AI usage (feature 09): implemented `GameExplorer`, debounced Persian-aware search, URL query synchronization, memoized filtering/sorting, result count, and empty state. Fixed input focus loss by removing key-based remounting and synchronizing the search input with URL state. Fixed Back/Forward history being overwritten by stale debounced values by tracking the last committed value in `useUrlState` and clearing pending navigation state on `popstate`. Manual interaction tests passed for continuous typing, focus preservation, and browser history navigation. Final automated verification is still to be recorded.
